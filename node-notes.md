@@ -60,6 +60,10 @@ the request object, the response object, and the next function in the stack.
 
 `function middleware(request, response, next) { ... }`
 
+Middleware functions must either call `response.end()` to complete the response,
+or call another function explicitly or using `next()` to continue execution.
+Otherwise the request will hang indefinitely.
+
 
 ### Error-handling middleware
 

@@ -6,7 +6,6 @@ var express = require('express'),
 	login = require('./login');
 
 
-// set up express
 var app = express()
 	.use(express.bodyParser())
 	.use(express.cookieParser())
@@ -14,21 +13,32 @@ var app = express()
 	.use(passport.initialize());
 
 
-app.get('/list', function(req, res) {
-	db.User.find({}, function(err, users) {
-		console.log(users);
-	});
-	res.end();
+// get methods
+
+app.get('*', function(req, res, next) {
+	if (!req.session.userid && req.url != '/login') {
+		return res.redirect('/login');
+	}
+	next();
 });
 
+app.get('/', function(req, res, next) {
+	db.getUserTasks(req.session.userid, function(err, tasks) {
+		if (err) return next(err);
+		res.send(swig.renderFile('./views/tasks.html', {tasks: tasks}));
+	});
+});
 
 app.get('/register', function(req, res) {
 	res.send(swig.renderFile('./views/register.html', {}));
 });
+
 app.get('/login', function(req, res) {
 	res.send(swig.renderFile('./views/login.html', {}));
 });
 
+
+// post methods
 
 app.post('/register', function(req, res) {
 	if (!req.body.username || !req.body.password1) {
@@ -39,16 +49,32 @@ app.post('/register', function(req, res) {
 	}
 	db.createUser(req.body.username, req.body.password1, function(errmsg) {
 		if (errmsg) return res.send(errmsg);
+		console.log('Created user ' + req.body.username);
 		res.redirect('/login');
 	});
 });
 
+app.post('/login', function(req, res, next) {
+	// call the passport local strategy's auth method, then call its result as middleware
+	passport.authenticate('local', function(err, user) {
+		if (err) return next(err);
+		if (!user) return res.redirect('/login');
+		req.session.regenerate(function(err) {
+			console.log('Logged in as ' + user.username);
+			req.session.userid = user._id;
+			res.redirect('/');
+		});
+	})(req, res, next);
+});
 
-// authenticate using passport local strategy, passing authenticate a done function
-app.post('/login', passport.authenticate('local', {
-	successRedirect: '/',
-	failureRedirect: '/login',
-}));
+app.post('/new', function(req, res) {
+	console.log('attempting to add new');
+	db.addTask(req.session.userid, req.body.title, function(err) {
+		if (err) return next(err);
+		console.log('Added task ' + req.body.title);
+		res.redirect('/');
+	});
+});
 
 
 app.listen(8888);

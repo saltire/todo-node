@@ -1,0 +1,13 @@
+<ul>
+{% for task in tasks %}
+    <li>
+        <input type='checkbox' {% if task.checked %}checked='checked' {% endif %}/>
+        {{ task.title }}
+    </li>
+{% endfor %}
+</ul>
+
+<form action='/new' method='post'>
+    <label for='title'>Add a task:</label> <input type='text' name='title' />
+    <input type='submit' value='Add' />
+</form>
